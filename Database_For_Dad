@@ -1,0 +1,175 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Sat Dec  2 17:03:26 2023
+
+@author: tomer
+"""
+from tkinter import *
+import os
+import csv
+
+global database_path
+global internal_database
+
+# Load the database to internal storage
+
+
+def load_csv_to_matrix():
+    global database_path
+    global internal_database
+    internal_database = []
+    with open(database_path, 'r') as csv_file:
+        csv_reader = csv.reader(csv_file)
+    for row in csv_reader:
+        internal_database.append(row)
+
+# save the internal database to hard drive storage
+
+
+def save_csv_to_drive():
+    global database_path
+    global internal_database
+    with open(database_path, 'w', newline='') as csv_file:
+        csv_writer = csv.writer(csv_file)
+        csv_writer.writerows(internal_database)
+
+# check if path exists
+
+
+def file_exists_or_create():
+    global database_path
+    if os.path.exists(database_path):
+        return True
+    else:
+        with open(database_path, 'w', newline=''):
+            messagebox.showinfo(title="Database created",
+                                message="Database has been created")
+            # Create an empty CSV file
+            pass
+        return False
+
+
+def enter_to_storage():
+    messagebox.showinfo(title="Entery Saved",
+                        message="Entry temporarily saved")
+    Input_window.focus_set()
+
+
+def enter_to_drive():
+    messagebox.showinfo(title="Entery Saved",
+                        message="List saved to hard drive")
+    Input_window.focus_set()
+
+
+def open_Input_window(button_name):
+    # Create the window
+    global Input_window
+    Input_window = Toplevel(root)
+    Input_window.title("Input window")
+    Input_window.geometry("660x460")
+    # Disable the button in the main window
+    button_name.config(state=DISABLED)
+    Input_window.protocol("WM_DELETE_WINDOW",
+                          lambda: on_new_window_close(Input_window, button_name))
+    # Creat widgets for window
+    label = Label(Input_window, text="This is Input window")
+    label_Cat1 = Label(Input_window, text="This is the lable for catagory #1")
+    label_Cat2 = Label(Input_window, text="This is the lable for catagory #2")
+    label_Cat3 = Label(Input_window, text="This is the lable for catagory #3")
+    label_Cat4 = Label(Input_window, text="This is the lable for catagory #4")
+    label_Cat5 = Label(Input_window, text="This is the lable for catagory #5")
+    entry_Cat1 = Entry(Input_window, width=20)
+    entry_Cat2 = Entry(Input_window, width=20)
+    entry_Cat3 = Entry(Input_window, width=20)
+    entry_Cat4 = Entry(Input_window, width=20)
+    entry_Cat5 = Entry(Input_window, width=20)
+    button_Enter = Button(Input_window, text="Enter",
+                          command=lambda: enter_to_storage())
+    button_Save = Button(Input_window, text="Save",
+                         command=lambda: enter_to_drive())
+    # Place widgets in window
+    count_row = 0
+    count_col = 0
+    label.grid(row=count_row, column=0, columnspan=3)
+    count_row += 1
+    label_Cat1.grid(row=count_row, column=0)
+    entry_Cat1.grid(row=count_row, column=1)
+    count_row += 1
+    label_Cat2.grid(row=count_row, column=0)
+    entry_Cat2.grid(row=count_row, column=1)
+    count_row += 1
+    label_Cat3.grid(row=count_row, column=0)
+    entry_Cat3.grid(row=count_row, column=1)
+    count_row += 1
+    label_Cat4.grid(row=count_row, column=0)
+    entry_Cat4.grid(row=count_row, column=1)
+    count_row += 1
+    label_Cat5.grid(row=count_row, column=0)
+    entry_Cat5.grid(row=count_row, column=1)
+    count_row += 1
+    button_Enter.grid(row=count_row, column=0)
+    button_Save.grid(row=count_row, column=1)
+
+
+def open_Edit_window(button_name):
+    Edit_window = Toplevel(root)
+    Edit_window.title("Edit_window")
+    Edit_window.geometry("660x460")
+
+    label = Label(Edit_window, text="This is Edit window")
+    label.pack()
+    button_name.config(state=DISABLED)
+    Edit_window.protocol("WM_DELETE_WINDOW",
+                         lambda: on_new_window_close(Edit_window, button_name))
+
+
+def open_Output_window(button_name):
+    Output_window = Toplevel(root)
+    Output_window.title("Output window")
+    Output_window.geometry("660x460")
+
+    label = Label(Output_window, text="This is Output window")
+    label.pack()
+    button_name.config(state=DISABLED)
+    Output_window.protocol("WM_DELETE_WINDOW",
+                           lambda: on_new_window_close(Output_window, button_name))
+
+
+def on_new_window_close(window_name, button_name):
+    # Enable the button in the main window when the new window is closed
+    button_name.config(state=NORMAL)
+    window_name.destroy()
+
+
+def Load_database():
+    messagebox.showinfo(title="Load Database",
+                        message="Databsase sucessfuly loaded")
+
+
+# Create the main window
+root = Tk()
+root.title("Main Window")
+root.geometry("660x460")
+# Creat widgets for main window
+label = Label(root, text="This is a main window")
+label_Database_location = Label(root, text="Database location")
+entry_Database_location = Entry(root, width=40)
+button_Load_database = Button(root, text="Load",
+                              command=lambda: Load_database())
+# Button to open a new window
+Input_window_btn = Button(root, text="Input",
+                          command=lambda: open_Input_window(Input_window_btn))
+Edit_window_btn = Button(root, text="Edit",
+                         command=lambda: open_Edit_window(Edit_window_btn))
+Output_window_btn = Button(root, text="Output",
+                           command=lambda: open_Output_window(Output_window_btn))
+# Place widgets
+label.grid(row=0, column=0, columnspan=4)
+Input_window_btn.grid(row=1, column=0)
+Edit_window_btn.grid(row=1, column=1)
+Output_window_btn.grid(row=1, column=3)
+label_Database_location.grid(row=2, column=0, columnspan=4)
+entry_Database_location.grid(row=3, column=0, columnspan=4)
+button_Load_database.grid(row=4, column=0)
+# Run the main loop
+root.mainloop()
