@@ -10,7 +10,7 @@ import csv
 
 global database_path
 global internal_database
-
+internal_database = ["Cat1", "Cat2", "Cat3", "Cat4", "Cat5"]
 # Load the database to internal storage
 
 
@@ -39,6 +39,7 @@ def save_csv_to_drive():
 def file_exists_or_create():
     global database_path
     if os.path.exists(database_path):
+        load_csv_to_matrix()
         return True
     else:
         with open(database_path, 'w', newline=''):
@@ -49,21 +50,39 @@ def file_exists_or_create():
         return False
 
 
-def enter_to_storage():
-    messagebox.showinfo(title="Entery Saved",
-                        message="Entry temporarily saved")
+def enter_to_storage(entry_array, entry_widgets):
+    global internal_database
+    global report_text
+
+    # Clear Entry widget values
+    for entry_widget in entry_widgets:
+        entry_widget.delete(0, 'end')
+
+    internal_database.append(entry_array)
+    report_text.config(state=NORMAL)
+    report_text.insert(
+        END, f' {entry_array[0]}\t{entry_array[1]}\t{entry_array[2]}\t{entry_array[3]}\t{entry_array[4]}\n')
+    report_text.config(state=DISABLED)
+#    messagebox.showinfo(title="Entery Saved",
+#                        message="Entry temporarily saved")
     Input_window.focus_set()
 
 
 def enter_to_drive():
+    save_csv_to_drive()
     messagebox.showinfo(title="Entery Saved",
                         message="List saved to hard drive")
     Input_window.focus_set()
 
 
+def on_scroll(*args):
+    report_text.yview(*args)
+
+
 def open_Input_window(button_name):
     # Create the window
     global Input_window
+    global internal_database
     Input_window = Toplevel(root)
     Input_window.title("Input window")
     Input_window.geometry("660x460")
@@ -84,9 +103,17 @@ def open_Input_window(button_name):
     entry_Cat4 = Entry(Input_window, width=20)
     entry_Cat5 = Entry(Input_window, width=20)
     button_Enter = Button(Input_window, text="Enter",
-                          command=lambda: enter_to_storage())
+                          command=lambda: enter_to_storage([entry_Cat1.get(), entry_Cat2.get(), entry_Cat3.get(), entry_Cat4.get(), entry_Cat5.get()], [entry_Cat1, entry_Cat2, entry_Cat3, entry_Cat4, entry_Cat5]))
     button_Save = Button(Input_window, text="Save",
                          command=lambda: enter_to_drive())
+    global report_text
+    report_text = Text(Input_window, borderwidth=5, bd=3,
+                       bg="gray", width=60, height=15)
+    report_text.insert(
+        "1.0", f'{internal_database[0]}\t{internal_database[1]}\t{internal_database[2]}\t{internal_database[3]}\t{internal_database[4]}\n')
+    report_text.config(state=DISABLED)
+    scrollbar = Scrollbar(Input_window, command=on_scroll)
+    report_text.config(yscrollcommand=scrollbar.set)
     # Place widgets in window
     count_row = 0
     count_col = 0
@@ -109,6 +136,9 @@ def open_Input_window(button_name):
     count_row += 1
     button_Enter.grid(row=count_row, column=0)
     button_Save.grid(row=count_row, column=1)
+    count_row += 1
+    report_text.grid(row=count_row, column=0, columnspan=3)
+    scrollbar.grid(row=count_row, column=3, sticky="ns")
 
 
 def open_Edit_window(button_name):
@@ -142,8 +172,11 @@ def on_new_window_close(window_name, button_name):
 
 
 def Load_database():
-    messagebox.showinfo(title="Load Database",
-                        message="Databsase sucessfuly loaded")
+    global database_path
+    database_path = entry_Database_location.get()
+    if file_exists_or_create():
+        messagebox.showinfo(title="Load Database",
+                            message="Databsase sucessfuly loaded")
 
 
 # Create the main window
