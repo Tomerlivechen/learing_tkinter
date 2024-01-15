@@ -186,16 +186,39 @@ def open_Input_window(button_name_array):
     scrollbar.grid(row=count_row, column=3, sticky="ns")
 
 
+def extract_column(matrix, column_index):
+    return list(set(row[column_index] for row in matrix[1:]))
+
+
+def set_catagory_values():
+    global internal_database
+    cat1_unique_Values = extract_column(internal_database, 0)
+    cat2_unique_Values = extract_column(internal_database, 1)
+    cat3_unique_Values = extract_column(internal_database, 2)
+    cat4_unique_Values = extract_column(internal_database, 3)
+
+
 def open_Edit_window(button_name_array):
     Edit_window = Toplevel(root)
     Edit_window.title("Edit_window")
     Edit_window.geometry("660x460")
-
-    label = Label(Edit_window, text="This is Edit window")
-    label.pack()
     disable_buttons(button_name_array)
     Edit_window.protocol("WM_DELETE_WINDOW",
                          lambda: on_new_window_close(Edit_window, button_name_array))
+    # Creat widgets for window
+    label = Label(Edit_window, text="This is Edit window")
+    label_Cat1 = Label(Edit_window, text="This is the lable for catagory #1")
+    label_Cat2 = Label(Edit_window, text="This is the lable for catagory #2")
+    label_Cat3 = Label(Edit_window, text="This is the lable for catagory #3")
+    label_Cat4 = Label(Edit_window, text="This is the lable for catagory #4")
+    label_Cat5 = Label(Edit_window, text="This is the lable for catagory #5")
+
+    combo_Cat1 = Combobox(values=cat1_Values)
+    combo_Cat2 = Combobox(values=cat2_Values)
+    combo_Cat3 = Combobox(values=cat3_Values)
+    combo_Cat4 = Combobox(values=cat4_Values)
+    # Place widgets in window
+    label.pack()
 
 
 def open_Output_window(button_name_array):
