@@ -10,18 +10,46 @@ import csv
 
 global database_path
 global internal_database
-internal_database = ["Cat1", "Cat2", "Cat3", "Cat4", "Cat5"]
-# Load the database to internal storage
+global loaded_database
+internal_database = [["Cat1", "Cat2", "Cat3", "Cat4", "Cat5"]]
 
 
-def load_csv_to_matrix():
+def disable_buttons(button_name_array):
+    for button in button_name_array:
+        button.config(state=DISABLED)
+
+
+def enable_buttons(button_name_array):
+    for button in button_name_array:
+        button.config(state=NORMAL)
+
+  # Load the database to internal storage
+
+
+def sort_and_remove_duplicates(matrix):
+    # Sort the matrix by columns
+    sorted_matrix = sorted(matrix[1:], key=lambda row: (
+        row[0], row[1], row[2], row[3], row[4]))
+    # Remove duplicate rows
+    unique_matrix = [sorted_matrix[0]]
+    for i in range(1, len(sorted_matrix)):
+        if tuple(sorted_matrix[i]) != tuple(sorted_matrix[i - 1]):
+            unique_matrix.append(sorted_matrix[i])
+
+    sorted_matrix_with_header = [matrix[0]] + unique_matrix
+    return sorted_matrix_with_header
+
+
+def load_csv_to_matrix(append):
     global database_path
     global internal_database
-    internal_database = []
+    if append == False:
+        internal_database = [["Cat1", "Cat2", "Cat3", "Cat4", "Cat5"]]
     with open(database_path, 'r') as csv_file:
         csv_reader = csv.reader(csv_file)
-    for row in csv_reader:
-        internal_database.append(row)
+        for row in csv_reader:
+            internal_database.append(row)
+
 
 # save the internal database to hard drive storage
 
@@ -29,9 +57,12 @@ def load_csv_to_matrix():
 def save_csv_to_drive():
     global database_path
     global internal_database
+    load_csv_to_matrix(True)
+    internal_database = sort_and_remove_duplicates(internal_database)
     with open(database_path, 'w', newline='') as csv_file:
         csv_writer = csv.writer(csv_file)
         csv_writer.writerows(internal_database)
+
 
 # check if path exists
 
@@ -39,7 +70,7 @@ def save_csv_to_drive():
 def file_exists_or_create():
     global database_path
     if os.path.exists(database_path):
-        load_csv_to_matrix()
+        load_csv_to_matrix(False)
         return True
     else:
         with open(database_path, 'w', newline=''):
@@ -50,22 +81,36 @@ def file_exists_or_create():
         return False
 
 
+def entery_test(entry_array):
+    count = 0
+    for entry_widget in entry_array:
+        if len(entry_widget) != 0:
+            count += 1
+    if count < len(entry_array):
+        messagebox.showinfo(title="Empty catagories",
+                            message="You seem to have missed some of the catagories")
+        return False
+    return True
+
+
 def enter_to_storage(entry_array, entry_widgets):
     global internal_database
     global report_text
+    # check if all catagories are filled
+    if entery_test(entry_array):
 
-    # Clear Entry widget values
-    for entry_widget in entry_widgets:
-        entry_widget.delete(0, 'end')
+        # Clear Entry widget values
+        for entry_widget in entry_widgets:
+            entry_widget.delete(0, 'end')
 
-    internal_database.append(entry_array)
-    report_text.config(state=NORMAL)
-    report_text.insert(
-        END, f' {entry_array[0]}\t{entry_array[1]}\t{entry_array[2]}\t{entry_array[3]}\t{entry_array[4]}\n')
-    report_text.config(state=DISABLED)
-#    messagebox.showinfo(title="Entery Saved",
+        internal_database.append(entry_array)
+        report_text.config(state=NORMAL)
+        report_text.insert(
+            END, f' {entry_array[0]}\t{entry_array[1]}\t{entry_array[2]}\t{entry_array[3]}\t{entry_array[4]}\n')
+        report_text.config(state=DISABLED)
+#        messagebox.showinfo(title="Entery Saved",
 #                        message="Entry temporarily saved")
-    Input_window.focus_set()
+        Input_window.focus_set()
 
 
 def enter_to_drive():
@@ -79,7 +124,7 @@ def on_scroll(*args):
     report_text.yview(*args)
 
 
-def open_Input_window(button_name):
+def open_Input_window(button_name_array):
     # Create the window
     global Input_window
     global internal_database
@@ -87,9 +132,9 @@ def open_Input_window(button_name):
     Input_window.title("Input window")
     Input_window.geometry("660x460")
     # Disable the button in the main window
-    button_name.config(state=DISABLED)
+    disable_buttons(button_name_array)
     Input_window.protocol("WM_DELETE_WINDOW",
-                          lambda: on_new_window_close(Input_window, button_name))
+                          lambda: on_new_window_close(Input_window, button_name_array))
     # Creat widgets for window
     label = Label(Input_window, text="This is Input window")
     label_Cat1 = Label(Input_window, text="This is the lable for catagory #1")
@@ -110,7 +155,7 @@ def open_Input_window(button_name):
     report_text = Text(Input_window, borderwidth=5, bd=3,
                        bg="gray", width=60, height=15)
     report_text.insert(
-        "1.0", f'{internal_database[0]}\t{internal_database[1]}\t{internal_database[2]}\t{internal_database[3]}\t{internal_database[4]}\n')
+        "1.0", f'{internal_database[0][0]}\t{internal_database[0][1]}\t{internal_database[0][2]}\t{internal_database[0][3]}\t{internal_database[0][4]}\n')
     report_text.config(state=DISABLED)
     scrollbar = Scrollbar(Input_window, command=on_scroll)
     report_text.config(yscrollcommand=scrollbar.set)
@@ -141,42 +186,43 @@ def open_Input_window(button_name):
     scrollbar.grid(row=count_row, column=3, sticky="ns")
 
 
-def open_Edit_window(button_name):
+def open_Edit_window(button_name_array):
     Edit_window = Toplevel(root)
     Edit_window.title("Edit_window")
     Edit_window.geometry("660x460")
 
     label = Label(Edit_window, text="This is Edit window")
     label.pack()
-    button_name.config(state=DISABLED)
+    disable_buttons(button_name_array)
     Edit_window.protocol("WM_DELETE_WINDOW",
-                         lambda: on_new_window_close(Edit_window, button_name))
+                         lambda: on_new_window_close(Edit_window, button_name_array))
 
 
-def open_Output_window(button_name):
+def open_Output_window(button_name_array):
     Output_window = Toplevel(root)
     Output_window.title("Output window")
     Output_window.geometry("660x460")
 
     label = Label(Output_window, text="This is Output window")
     label.pack()
-    button_name.config(state=DISABLED)
+    disable_buttons(button_name_array)
     Output_window.protocol("WM_DELETE_WINDOW",
-                           lambda: on_new_window_close(Output_window, button_name))
+                           lambda: on_new_window_close(Output_window, button_name_array))
 
 
-def on_new_window_close(window_name, button_name):
+def on_new_window_close(window_name, button_name_array):
     # Enable the button in the main window when the new window is closed
-    button_name.config(state=NORMAL)
+    enable_buttons(button_name_array)
     window_name.destroy()
 
 
-def Load_database():
+def Load_database(button_array):
     global database_path
     database_path = entry_Database_location.get()
     if file_exists_or_create():
         messagebox.showinfo(title="Load Database",
                             message="Databsase sucessfuly loaded")
+    enable_buttons(button_array)
 
 
 # Create the main window
@@ -188,15 +234,17 @@ label = Label(root, text="This is a main window")
 label_Database_location = Label(root, text="Database location")
 entry_Database_location = Entry(root, width=40)
 button_Load_database = Button(root, text="Load",
-                              command=lambda: Load_database())
+                              command=lambda: Load_database([Input_window_btn, Edit_window_btn, Output_window_btn]))
 # Button to open a new window
 Input_window_btn = Button(root, text="Input",
-                          command=lambda: open_Input_window(Input_window_btn))
+                          command=lambda: open_Input_window([Input_window_btn, Edit_window_btn, Output_window_btn, button_Load_database]))
 Edit_window_btn = Button(root, text="Edit",
-                         command=lambda: open_Edit_window(Edit_window_btn))
+                         command=lambda: open_Edit_window([Input_window_btn, Edit_window_btn, Output_window_btn, button_Load_database]))
 Output_window_btn = Button(root, text="Output",
-                           command=lambda: open_Output_window(Output_window_btn))
+                           command=lambda: open_Output_window([Input_window_btn, Edit_window_btn, Output_window_btn, button_Load_database]))
 # Place widgets
+disable_buttons([Input_window_btn, Edit_window_btn,
+                Output_window_btn])
 label.grid(row=0, column=0, columnspan=4)
 Input_window_btn.grid(row=1, column=0)
 Edit_window_btn.grid(row=1, column=1)
