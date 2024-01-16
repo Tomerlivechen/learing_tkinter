@@ -5,13 +5,17 @@ Created on Sat Dec  2 17:03:26 2023
 @author: tomer
 """
 from tkinter import *
+from tkinter import ttk
 import os
+import uuid
 import csv
-
+import numpy as np
 global database_path
 global internal_database
 global loaded_database
-internal_database = [["Cat1", "Cat2", "Cat3", "Cat4", "Cat5"]]
+global tab_value
+tab_value = '\t'
+internal_database = [["ID", "Cat1", "Cat2", "Cat3", "Cat4", "Cat5"]]
 
 
 def disable_buttons(button_name_array):
@@ -29,7 +33,7 @@ def enable_buttons(button_name_array):
 def sort_and_remove_duplicates(matrix):
     # Sort the matrix by columns
     sorted_matrix = sorted(matrix[1:], key=lambda row: (
-        row[0], row[1], row[2], row[3], row[4]))
+        row[1], row[2], row[3], row[4]))
     # Remove duplicate rows
     unique_matrix = [sorted_matrix[0]]
     for i in range(1, len(sorted_matrix)):
@@ -44,7 +48,7 @@ def load_csv_to_matrix(append):
     global database_path
     global internal_database
     if append == False:
-        internal_database = [["Cat1", "Cat2", "Cat3", "Cat4", "Cat5"]]
+        internal_database = [["ID", "Cat1", "Cat2", "Cat3", "Cat4", "Cat5"]]
     with open(database_path, 'r') as csv_file:
         csv_reader = csv.reader(csv_file)
         for row in csv_reader:
@@ -102,11 +106,13 @@ def enter_to_storage(entry_array, entry_widgets):
         # Clear Entry widget values
         for entry_widget in entry_widgets:
             entry_widget.delete(0, 'end')
-
+        # Generate a unique random ID
+        unique_id = str(uuid.uuid4())
+        entry_array = [unique_id] + entry_array
         internal_database.append(entry_array)
         report_text.config(state=NORMAL)
         report_text.insert(
-            END, f' {entry_array[0]}\t{entry_array[1]}\t{entry_array[2]}\t{entry_array[3]}\t{entry_array[4]}\n')
+            END, f'{entry_array[0]}\t\t\t\t\t{entry_array[1]}\t{entry_array[2]}\t{entry_array[3]}\t{entry_array[4]}\t{entry_array[5]}\n')
         report_text.config(state=DISABLED)
 #        messagebox.showinfo(title="Entery Saved",
 #                        message="Entry temporarily saved")
@@ -120,8 +126,8 @@ def enter_to_drive():
     Input_window.focus_set()
 
 
-def on_scroll(*args):
-    report_text.yview(*args)
+def on_scroll(text_name, *args):
+    text_name.yview(*args)
 
 
 def open_Input_window(button_name_array):
@@ -153,11 +159,11 @@ def open_Input_window(button_name_array):
                          command=lambda: enter_to_drive())
     global report_text
     report_text = Text(Input_window, borderwidth=5, bd=3,
-                       bg="gray", width=60, height=15)
+                       bg="gray", width=80, height=15, font=('Courier', 12))
     report_text.insert(
-        "1.0", f'{internal_database[0][0]}\t{internal_database[0][1]}\t{internal_database[0][2]}\t{internal_database[0][3]}\t{internal_database[0][4]}\n')
+        "1.0", f'{internal_database[0][0]}\t\t\t\t\t{internal_database[0][1]}\t{internal_database[0][2]}\t{internal_database[0][3]}\t{internal_database[0][4]}\t{internal_database[0][5]}\n')
     report_text.config(state=DISABLED)
-    scrollbar = Scrollbar(Input_window, command=on_scroll)
+    scrollbar = Scrollbar(Input_window, command=on_scroll(report_text))
     report_text.config(yscrollcommand=scrollbar.set)
     # Place widgets in window
     count_row = 0
@@ -192,10 +198,47 @@ def extract_column(matrix, column_index):
 
 def set_catagory_values():
     global internal_database
-    cat1_unique_Values = extract_column(internal_database, 0)
-    cat2_unique_Values = extract_column(internal_database, 1)
-    cat3_unique_Values = extract_column(internal_database, 2)
-    cat4_unique_Values = extract_column(internal_database, 3)
+    cat1_unique_Values = extract_column(internal_database, 1)
+    cat2_unique_Values = extract_column(internal_database, 2)
+    cat3_unique_Values = extract_column(internal_database, 3)
+    cat4_unique_Values = extract_column(internal_database, 4)
+    cat_values = [cat1_unique_Values, cat2_unique_Values,
+                  cat3_unique_Values, cat4_unique_Values,]
+    return cat_values
+
+
+def search_in_internal_database(combo_values):
+    global internal_database
+    global search_text
+    global tab_value
+    internal_database_array = np.array(internal_database[1:])
+    counter = 1
+    filter_values = [None] * (len(combo_values)+1)
+    for values in combo_values:
+        if len(values) > 0:
+            filter_values[counter] = values
+        else:
+            filter_values[counter] = None
+        counter += 1
+    # Create a boolean mask for each column
+    mask = [internal_database_array[:, i] == value if value is not None else np.full(
+        internal_database_array.shape[0], True) for i, value in enumerate(filter_values)]
+    # Combine masks using logical AND to get the final filter
+    final_mask = np.all(mask, axis=0)
+    # Apply the filter to the original matrix
+    filtered_array = internal_database_array[final_mask]
+    search_text.config(state=NORMAL)
+    search_text.delete('1.0', END)
+    search_text.insert(
+        "1.0", f'{internal_database[0][0]}\t\t\t\t\t{internal_database[0][1]}\t{internal_database[0][2]}\t{internal_database[0][3]}\t{internal_database[0][4]}\t{internal_database[0][5]}\n')
+    for i in range(len(filtered_array)):
+        for j in range(6):
+            if j >= 1:
+                search_text.insert(END, f'{filtered_array[i][j]}\t')
+            else:
+                search_text.insert(END, f'{filtered_array[i][j]}\t\t\t\t\t')
+        search_text.insert(END, f'\n')
+    search_text.config(state=DISABLED)
 
 
 def open_Edit_window(button_name_array):
@@ -212,13 +255,41 @@ def open_Edit_window(button_name_array):
     label_Cat3 = Label(Edit_window, text="This is the lable for catagory #3")
     label_Cat4 = Label(Edit_window, text="This is the lable for catagory #4")
     label_Cat5 = Label(Edit_window, text="This is the lable for catagory #5")
+    cat_Values = set_catagory_values()
+    combo_Cat1 = ttk.Combobox(Edit_window, values=cat_Values[0])
+    combo_Cat2 = ttk.Combobox(Edit_window, values=cat_Values[1])
+    combo_Cat3 = ttk.Combobox(Edit_window, values=cat_Values[2])
+    combo_Cat4 = ttk.Combobox(Edit_window, values=cat_Values[3])
 
-    combo_Cat1 = Combobox(values=cat1_Values)
-    combo_Cat2 = Combobox(values=cat2_Values)
-    combo_Cat3 = Combobox(values=cat3_Values)
-    combo_Cat4 = Combobox(values=cat4_Values)
+    search_button = Button(Edit_window, text="Search",
+                           command=lambda: search_in_internal_database([combo_Cat1.get(), combo_Cat2.get(), combo_Cat3.get(), combo_Cat4.get()]))
+    global search_text
+    search_text = Text(Edit_window, borderwidth=5, bd=3,
+                       bg="gray", width=80, height=15, font=('Courier', 12))
+    search_text.insert(
+        "1.0", f'{internal_database[0][0]}\t\t\t\t\t{internal_database[0][1]}\t{internal_database[0][2]}\t{internal_database[0][3]}\t{internal_database[0][4]}\t{internal_database[0][5]}\n')
+    scrollbar = Scrollbar(Edit_window, command=on_scroll(search_text))
+    search_text.config(yscrollcommand=scrollbar.set)
     # Place widgets in window
-    label.pack()
+    count_row = 0
+    label.grid(row=count_row, column=0, columnspan=3)
+    count_row += 1
+    label_Cat1.grid(row=count_row, column=0)
+    combo_Cat1.grid(row=count_row, column=1)
+    count_row += 1
+    label_Cat2.grid(row=count_row, column=0)
+    combo_Cat2.grid(row=count_row, column=1)
+    count_row += 1
+    label_Cat3.grid(row=count_row, column=0)
+    combo_Cat3.grid(row=count_row, column=1)
+    count_row += 1
+    label_Cat4.grid(row=count_row, column=0)
+    combo_Cat4.grid(row=count_row, column=1)
+    count_row += 1
+    search_button.grid(row=count_row, column=0)
+    count_row += 1
+    search_text.grid(row=count_row, column=0, columnspan=3)
+    scrollbar.grid(row=count_row, column=3, sticky="ns")
 
 
 def open_Output_window(button_name_array):
