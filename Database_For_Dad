@@ -15,10 +15,11 @@ global internal_database
 global loaded_database
 global catagory_name_array
 global catagory_lable_array
+global report_type
 
 catagory_name_array = ["ID", "Cat1", "Cat2", "Cat3", "Amount", "Min"]
 catagory_lable_array = ["This is the lable for catagory #1", "This is the lable for catagory #2",
-                        "This is the lable for catagory #3", "Current amount of items", "Minimum amount of items"]
+                        "This is the lable for catagory #3", "Current amount of items:", "Minimum amount of items:"]
 
 internal_database = [catagory_name_array]
 
@@ -108,6 +109,11 @@ def entery_test(entry_array, window_focus):
     if count < len(entry_array):
         messagebox.showinfo(title="Empty catagories",
                             message="You seem to have missed some of the catagories")
+        window_focus.focus_set()
+
+    if not entry_array[3].isnumeric() or not entry_array[4].isnumeric():
+        messagebox.showinfo(title="Value Error",
+                            message="Amount values must be numeric")
         window_focus.focus_set()
         return False
     return True
@@ -225,9 +231,13 @@ def set_catagory_values():
     return cat_values
 
 
-def search_in_internal_database(combo_values):
+def report_naming(name):
+    global report_type
+    report_type = name
+
+
+def search_in_internal_database(combo_values, text_name):
     global internal_database
-    global search_text
     global catagory_name_array
     internal_database_array = np.array(internal_database[1:])
     counter = 1
@@ -245,21 +255,25 @@ def search_in_internal_database(combo_values):
     final_mask = np.all(mask, axis=0)
     # Apply the filter to the original matrix
     filtered_array = internal_database_array[final_mask]
-    search_text.config(state=NORMAL)
-    search_text.delete('1.0', END)
-    search_text.insert(
+    write_on_text(filtered_array, text_name)
+
+
+def write_on_text(filtered_array, text_name):
+    text_name.config(state=NORMAL)
+    text_name.delete('1.0', END)
+    text_name.insert(
         "1.0", f'{catagory_name_array[0]}\t\t\t\t\t{catagory_name_array[1]}\t{catagory_name_array[2]}\t{catagory_name_array[3]}\t{catagory_name_array[4]}\t{catagory_name_array[5]}\n')
     for i in range(len(filtered_array)):
         for j in range(6):
             if j >= 1:
-                search_text.insert(END, f'{filtered_array[i][j]}\t')
+                text_name.insert(END, f'{filtered_array[i][j]}\t')
             else:
-                search_text.insert(END, f'{filtered_array[i][j]}\t\t\t\t\t')
-        search_text.insert(END, f'\n')
-    search_text.config(state=DISABLED)
+                text_name.insert(END, f'{filtered_array[i][j]}\t\t\t\t\t')
+        text_name.insert(END, f'\n')
+    text_name.config(state=DISABLED)
 
 
-def delete_entry(item_id, replace):
+def delete_entry(item_id, replace, window_focus):
     global internal_database
     falg = 0
     for row in internal_database:
@@ -306,7 +320,7 @@ def open_Edit_window(button_name_array):
     combo_Cat4 = ttk.Combobox(Edit_window, values=cat_Values[3])
 
     search_button = Button(Edit_window, text="Search",
-                           command=lambda: search_in_internal_database([combo_Cat1.get(), combo_Cat2.get(), combo_Cat3.get(), combo_Cat4.get()]))
+                           command=lambda: search_in_internal_database([combo_Cat1.get(), combo_Cat2.get(), combo_Cat3.get(), combo_Cat4.get()], search_text))
     search_text = Text(Edit_window, borderwidth=5, bd=3,
                        bg="gray", width=80, height=15, font=('Courier', 12))
     search_text.insert(
@@ -412,16 +426,102 @@ def edit_tab_save(item_id, entry_array, window_focus):
         window_focus.destroy()
 
 
+def under_min_button_action(text_name, report_name):
+    global internal_database
+    filtered_rows = [row for row in internal_database if row[-1] > row[-2]]
+    write_on_text(filtered_rows, text_name)
+    report_naming(report_name)
+
+
+def filter_button_action(combo_values, text_name, report_name):
+    search_in_internal_database(combo_values, text_name)
+    report_naming(report_name)
+
+
+def full_report_button_action(database, text_name, report_name):
+    write_on_text(database, text_name)
+    report_naming(report_name)
+
+
 def open_Output_window(button_name_array):
+    global report_text
+    global internal_database
+    global catagory_lable_array
     Output_window = Toplevel(root)
     Output_window.title("Output window")
-    Output_window.geometry("660x460")
+    Output_window.geometry("840x500")
 
     label = Label(Output_window, text="This is Output window")
-    label.pack()
     disable_buttons(button_name_array)
     Output_window.protocol("WM_DELETE_WINDOW",
                            lambda: on_new_window_close(Output_window, button_name_array))
+    label_custome = Label(Output_window, text="This is custome output")
+    label_Cat1 = Label(Output_window, text=catagory_lable_array[0])
+    label_Cat2 = Label(Output_window, text=catagory_lable_array[1])
+    label_Cat3 = Label(Output_window, text=catagory_lable_array[2])
+    label_Cat4 = Label(Output_window, text=catagory_lable_array[3])
+    label_Cat5 = Label(Output_window, text=catagory_lable_array[4])
+    cat_Values = set_catagory_values()
+    combo_Cat1 = ttk.Combobox(Output_window, values=cat_Values[0])
+    combo_Cat2 = ttk.Combobox(Output_window, values=cat_Values[1])
+    combo_Cat3 = ttk.Combobox(Output_window, values=cat_Values[2])
+    combo_Cat4 = ttk.Combobox(Output_window, values=cat_Values[3])
+
+    filter_button = Button(Output_window, text="Filter",
+                           command=lambda: search_in_internal_database([combo_Cat1.get(), combo_Cat2.get(), combo_Cat3.get(), combo_Cat4.get()], report_text, "Custom_report"))
+    full_report_button = Button(Output_window, text="Full report",
+                                command=lambda: full_report_button_action(internal_database, report_text, "Full_report"))
+    under_min_button = Button(Output_window, text="Under Min report",
+                              command=lambda: under_min_button_action(report_text, "Under_Min"))
+    Export_button = Button(Output_window, text="Export",
+                           command=lambda: export_report(report_text))
+    report_text = Text(Output_window, borderwidth=5, bd=3,
+                       bg="gray", width=80, height=15, font=('Courier', 12))
+    report_text.insert(
+        "1.0", f'{catagory_name_array[0]}\t\t\t\t\t{catagory_name_array[1]}\t{catagory_name_array[2]}\t{catagory_name_array[3]}\t{catagory_name_array[4]}\t{catagory_name_array[5]}\n')
+    scrollbar = Scrollbar(Output_window, command=on_scroll(report_text))
+    report_text.config(yscrollcommand=scrollbar.set)
+
+    # Place widgets in window
+    count_row = 0
+    label.grid(row=count_row, column=0, columnspan=3)
+    count_row += 1
+    label_custome.grid(row=count_row, column=0, columnspan=3)
+    count_row += 1
+    label_Cat1.grid(row=count_row, column=0)
+    combo_Cat1.grid(row=count_row, column=1)
+    count_row += 1
+    label_Cat2.grid(row=count_row, column=0)
+    combo_Cat2.grid(row=count_row, column=1)
+    count_row += 1
+    label_Cat3.grid(row=count_row, column=0)
+    combo_Cat3.grid(row=count_row, column=1)
+    count_row += 1
+    label_Cat4.grid(row=count_row, column=0)
+    combo_Cat4.grid(row=count_row, column=1)
+    count_row += 1
+    filter_button.grid(row=count_row, column=0)
+    under_min_button.grid(row=count_row, column=1)
+    full_report_button.grid(row=count_row, column=3)
+    count_row += 1
+    report_text.grid(row=count_row, column=0, columnspan=6)
+    scrollbar.grid(row=count_row, column=6, sticky="ns")
+    count_row += 1
+    label_edit.grid(row=count_row, column=0, columnspan=3)
+    count_row += 1
+    id_to_edit_entry.grid(row=count_row, column=0, columnspan=3)
+    count_row += 1
+    Export_button.grid(row=count_row, column=0)
+
+
+def export_report(report_text):
+    global database_path
+    global report_type
+    export_path = database_path[:4]
+    export_path += report_type+".txt"
+    text_content = text_widget.get("1.0", tk.END)
+    with open(file_path, 'w') as file:
+        file.write(text_content)
 
 
 def on_new_window_close(window_name, button_name_array):
