@@ -13,9 +13,14 @@ import numpy as np
 global database_path
 global internal_database
 global loaded_database
-global tab_value
-tab_value = '\t'
-internal_database = [["ID", "Cat1", "Cat2", "Cat3", "Cat4", "Cat5"]]
+global catagory_name_array
+global catagory_lable_array
+
+catagory_name_array = ["ID", "Cat1", "Cat2", "Cat3", "Amount", "Min"]
+catagory_lable_array = ["This is the lable for catagory #1", "This is the lable for catagory #2",
+                        "This is the lable for catagory #3", "Current amount of items", "Minimum amount of items"]
+
+internal_database = [catagory_name_array]
 
 
 def disable_buttons(button_name_array):
@@ -47,21 +52,31 @@ def sort_and_remove_duplicates(matrix):
 def load_csv_to_matrix(append):
     global database_path
     global internal_database
-    if append == False:
-        internal_database = [["ID", "Cat1", "Cat2", "Cat3", "Cat4", "Cat5"]]
-    with open(database_path, 'r') as csv_file:
-        csv_reader = csv.reader(csv_file)
-        for row in csv_reader:
-            internal_database.append(row)
+    global catagory_name_array
+    if not append:
+        internal_database = [catagory_name_array]
+    try:
+        with open(database_path, 'r') as csv_file:
+            csv_reader = csv.reader(csv_file)
+
+        # Skip the header row
+            if append:
+                next(csv_reader)
+
+            for row in csv_reader:
+                internal_database.append(row)
+    except StopIteration:
+        pass
 
 
 # save the internal database to hard drive storage
 
 
-def save_csv_to_drive():
+def save_csv_to_drive(delete):
     global database_path
     global internal_database
-    load_csv_to_matrix(True)
+    if not delete:
+        load_csv_to_matrix(True)
     internal_database = sort_and_remove_duplicates(internal_database)
     with open(database_path, 'w', newline='') as csv_file:
         csv_writer = csv.writer(csv_file)
@@ -85,7 +100,7 @@ def file_exists_or_create():
         return False
 
 
-def entery_test(entry_array):
+def entery_test(entry_array, window_focus):
     count = 0
     for entry_widget in entry_array:
         if len(entry_widget) != 0:
@@ -93,15 +108,16 @@ def entery_test(entry_array):
     if count < len(entry_array):
         messagebox.showinfo(title="Empty catagories",
                             message="You seem to have missed some of the catagories")
+        window_focus.focus_set()
         return False
     return True
 
 
-def enter_to_storage(entry_array, entry_widgets):
+def enter_to_storage(entry_array, entry_widgets, window_focus):
     global internal_database
     global report_text
     # check if all catagories are filled
-    if entery_test(entry_array):
+    if entery_test(entry_array, window_focus):
 
         # Clear Entry widget values
         for entry_widget in entry_widgets:
@@ -119,11 +135,11 @@ def enter_to_storage(entry_array, entry_widgets):
         Input_window.focus_set()
 
 
-def enter_to_drive():
-    save_csv_to_drive()
+def enter_to_drive(delete, window_focus):
+    save_csv_to_drive(delete)
     messagebox.showinfo(title="Entery Saved",
                         message="List saved to hard drive")
-    Input_window.focus_set()
+    window_focus.focus_set()
 
 
 def on_scroll(text_name, *args):
@@ -134,34 +150,36 @@ def open_Input_window(button_name_array):
     # Create the window
     global Input_window
     global internal_database
+    global catagory_name_array
+    global catagory_lable_array
     Input_window = Toplevel(root)
     Input_window.title("Input window")
-    Input_window.geometry("660x460")
+    Input_window.geometry("860x460")
     # Disable the button in the main window
     disable_buttons(button_name_array)
     Input_window.protocol("WM_DELETE_WINDOW",
                           lambda: on_new_window_close(Input_window, button_name_array))
     # Creat widgets for window
     label = Label(Input_window, text="This is Input window")
-    label_Cat1 = Label(Input_window, text="This is the lable for catagory #1")
-    label_Cat2 = Label(Input_window, text="This is the lable for catagory #2")
-    label_Cat3 = Label(Input_window, text="This is the lable for catagory #3")
-    label_Cat4 = Label(Input_window, text="This is the lable for catagory #4")
-    label_Cat5 = Label(Input_window, text="This is the lable for catagory #5")
+    label_Cat1 = Label(Input_window, text=catagory_lable_array[0])
+    label_Cat2 = Label(Input_window, text=catagory_lable_array[1])
+    label_Cat3 = Label(Input_window, text=catagory_lable_array[2])
+    label_Cat4 = Label(Input_window, text=catagory_lable_array[3])
+    label_Cat5 = Label(Input_window, text=catagory_lable_array[4])
     entry_Cat1 = Entry(Input_window, width=20)
     entry_Cat2 = Entry(Input_window, width=20)
     entry_Cat3 = Entry(Input_window, width=20)
     entry_Cat4 = Entry(Input_window, width=20)
     entry_Cat5 = Entry(Input_window, width=20)
     button_Enter = Button(Input_window, text="Enter",
-                          command=lambda: enter_to_storage([entry_Cat1.get(), entry_Cat2.get(), entry_Cat3.get(), entry_Cat4.get(), entry_Cat5.get()], [entry_Cat1, entry_Cat2, entry_Cat3, entry_Cat4, entry_Cat5]))
+                          command=lambda: enter_to_storage([entry_Cat1.get(), entry_Cat2.get(), entry_Cat3.get(), entry_Cat4.get(), entry_Cat5.get()], [entry_Cat1, entry_Cat2, entry_Cat3, entry_Cat4, entry_Cat5], Input_window))
     button_Save = Button(Input_window, text="Save",
-                         command=lambda: enter_to_drive())
+                         command=lambda: enter_to_drive(False, Input_window))
     global report_text
     report_text = Text(Input_window, borderwidth=5, bd=3,
                        bg="gray", width=80, height=15, font=('Courier', 12))
     report_text.insert(
-        "1.0", f'{internal_database[0][0]}\t\t\t\t\t{internal_database[0][1]}\t{internal_database[0][2]}\t{internal_database[0][3]}\t{internal_database[0][4]}\t{internal_database[0][5]}\n')
+        "1.0", f'{catagory_name_array[0]}\t\t\t\t\t{catagory_name_array[1]}\t{catagory_name_array[2]}\t{catagory_name_array[3]}\t{catagory_name_array[4]}\t{catagory_name_array[5]}\n')
     report_text.config(state=DISABLED)
     scrollbar = Scrollbar(Input_window, command=on_scroll(report_text))
     report_text.config(yscrollcommand=scrollbar.set)
@@ -210,7 +228,7 @@ def set_catagory_values():
 def search_in_internal_database(combo_values):
     global internal_database
     global search_text
-    global tab_value
+    global catagory_name_array
     internal_database_array = np.array(internal_database[1:])
     counter = 1
     filter_values = [None] * (len(combo_values)+1)
@@ -230,7 +248,7 @@ def search_in_internal_database(combo_values):
     search_text.config(state=NORMAL)
     search_text.delete('1.0', END)
     search_text.insert(
-        "1.0", f'{internal_database[0][0]}\t\t\t\t\t{internal_database[0][1]}\t{internal_database[0][2]}\t{internal_database[0][3]}\t{internal_database[0][4]}\t{internal_database[0][5]}\n')
+        "1.0", f'{catagory_name_array[0]}\t\t\t\t\t{catagory_name_array[1]}\t{catagory_name_array[2]}\t{catagory_name_array[3]}\t{catagory_name_array[4]}\t{catagory_name_array[5]}\n')
     for i in range(len(filtered_array)):
         for j in range(6):
             if j >= 1:
@@ -241,20 +259,46 @@ def search_in_internal_database(combo_values):
     search_text.config(state=DISABLED)
 
 
+def delete_entry(item_id, replace):
+    global internal_database
+    falg = 0
+    for row in internal_database:
+        if row[0] == item_id:
+            internal_database.remove(row)
+            flag = 1
+            if not replace:
+                messagebox.showinfo(title="Item deleted",
+                                    message="Item deleted")
+            break
+    if flag == 0:
+        messagebox.showerror(title="ID not found", message="ID not found")
+
+
+def find_item(item_id):
+    global internal_database
+    for row in internal_database:
+        if row[0] == item_id:
+            return row
+
+
 def open_Edit_window(button_name_array):
+    global catagory_name_array
+    global internal_database
+    global search_text
+    global catagory_lable_array
     Edit_window = Toplevel(root)
     Edit_window.title("Edit_window")
-    Edit_window.geometry("660x460")
+    Edit_window.geometry("840x500")
     disable_buttons(button_name_array)
     Edit_window.protocol("WM_DELETE_WINDOW",
                          lambda: on_new_window_close(Edit_window, button_name_array))
     # Creat widgets for window
     label = Label(Edit_window, text="This is Edit window")
-    label_Cat1 = Label(Edit_window, text="This is the lable for catagory #1")
-    label_Cat2 = Label(Edit_window, text="This is the lable for catagory #2")
-    label_Cat3 = Label(Edit_window, text="This is the lable for catagory #3")
-    label_Cat4 = Label(Edit_window, text="This is the lable for catagory #4")
-    label_Cat5 = Label(Edit_window, text="This is the lable for catagory #5")
+    label_Cat1 = Label(Edit_window, text=catagory_lable_array[0])
+    label_Cat2 = Label(Edit_window, text=catagory_lable_array[1])
+    label_Cat3 = Label(Edit_window, text=catagory_lable_array[2])
+    label_Cat4 = Label(Edit_window, text=catagory_lable_array[3])
+    label_Cat5 = Label(Edit_window, text=catagory_lable_array[4])
     cat_Values = set_catagory_values()
     combo_Cat1 = ttk.Combobox(Edit_window, values=cat_Values[0])
     combo_Cat2 = ttk.Combobox(Edit_window, values=cat_Values[1])
@@ -263,13 +307,20 @@ def open_Edit_window(button_name_array):
 
     search_button = Button(Edit_window, text="Search",
                            command=lambda: search_in_internal_database([combo_Cat1.get(), combo_Cat2.get(), combo_Cat3.get(), combo_Cat4.get()]))
-    global search_text
     search_text = Text(Edit_window, borderwidth=5, bd=3,
                        bg="gray", width=80, height=15, font=('Courier', 12))
     search_text.insert(
-        "1.0", f'{internal_database[0][0]}\t\t\t\t\t{internal_database[0][1]}\t{internal_database[0][2]}\t{internal_database[0][3]}\t{internal_database[0][4]}\t{internal_database[0][5]}\n')
+        "1.0", f'{catagory_name_array[0]}\t\t\t\t\t{catagory_name_array[1]}\t{catagory_name_array[2]}\t{catagory_name_array[3]}\t{catagory_name_array[4]}\t{catagory_name_array[5]}\n')
     scrollbar = Scrollbar(Edit_window, command=on_scroll(search_text))
     search_text.config(yscrollcommand=scrollbar.set)
+    label_edit = Label(Edit_window, text="Enter the ID if the item to edit")
+    id_to_edit_entry = Entry(Edit_window, width=40)
+    delete_button = Button(Edit_window, text="Delete",
+                           command=lambda: delete_entry(id_to_edit_entry.get(), False))
+    edit_button = Button(Edit_window, text="Edit",
+                         command=lambda: open_edit_tab(id_to_edit_entry.get(), [delete_button, edit_button, save_button]))
+    save_button = Button(Edit_window, text="Save",
+                         command=lambda: enter_to_drive(True, Edit_window))
     # Place widgets in window
     count_row = 0
     label.grid(row=count_row, column=0, columnspan=3)
@@ -288,8 +339,77 @@ def open_Edit_window(button_name_array):
     count_row += 1
     search_button.grid(row=count_row, column=0)
     count_row += 1
-    search_text.grid(row=count_row, column=0, columnspan=3)
-    scrollbar.grid(row=count_row, column=3, sticky="ns")
+    search_text.grid(row=count_row, column=0, columnspan=6)
+    scrollbar.grid(row=count_row, column=6, sticky="ns")
+    count_row += 1
+    label_edit.grid(row=count_row, column=0, columnspan=3)
+    count_row += 1
+    id_to_edit_entry.grid(row=count_row, column=0, columnspan=3)
+    count_row += 1
+    edit_button.grid(row=count_row, column=0)
+    delete_button.grid(row=count_row, column=1)
+    save_button.grid(row=count_row, column=2)
+
+
+def open_edit_tab(item_id, button_name_array):
+    global internal_database
+    global catagory_lable_array
+    Edit_tab = Toplevel(root)
+    Edit_tab.title("Edit tab")
+    Edit_tab.geometry("300x160")
+    disable_buttons(button_name_array)
+    Edit_tab.protocol("WM_DELETE_WINDOW",
+                      lambda: on_new_window_close(Edit_tab, button_name_array))
+    item_data = find_item(item_id)
+    # Creat widgets for window
+    label = Label(Edit_tab, text="This is Edit item window")
+    label_Cat1 = Label(Edit_tab, text=catagory_lable_array[0])
+    label_Cat2 = Label(Edit_tab, text=catagory_lable_array[1])
+    label_Cat3 = Label(Edit_tab, text=catagory_lable_array[2])
+    label_Cat4 = Label(Edit_tab, text=catagory_lable_array[3])
+    label_Cat5 = Label(Edit_tab, text=catagory_lable_array[4])
+    entry_Cat1 = Entry(Edit_tab, width=20)
+    entry_Cat2 = Entry(Edit_tab, width=20)
+    entry_Cat3 = Entry(Edit_tab, width=20)
+    entry_Cat4 = Entry(Edit_tab, width=20)
+    entry_Cat5 = Entry(Edit_tab, width=20)
+    entry_Cat1.insert(0, item_data[1])
+    entry_Cat2.insert(0, item_data[2])
+    entry_Cat3.insert(0, item_data[3])
+    entry_Cat4.insert(0, item_data[4])
+    entry_Cat5.insert(0, item_data[5])
+    save_button = Button(Edit_tab, text="Save", command=lambda: edit_tab_save(item_id, [
+                         entry_Cat1.get(), entry_Cat2.get(), entry_Cat3.get(), entry_Cat4.get(), entry_Cat5.get()], Edit_tab))
+    # Place widgets in window
+    count_row = 0
+    label.grid(row=count_row, column=0, columnspan=3)
+    count_row += 1
+    label_Cat1.grid(row=count_row, column=0)
+    entry_Cat1.grid(row=count_row, column=1)
+    count_row += 1
+    label_Cat2.grid(row=count_row, column=0)
+    entry_Cat2.grid(row=count_row, column=1)
+    count_row += 1
+    label_Cat3.grid(row=count_row, column=0)
+    entry_Cat3.grid(row=count_row, column=1)
+    count_row += 1
+    label_Cat4.grid(row=count_row, column=0)
+    entry_Cat4.grid(row=count_row, column=1)
+    count_row += 1
+    label_Cat5.grid(row=count_row, column=0)
+    entry_Cat5.grid(row=count_row, column=1)
+    count_row += 1
+    save_button.grid(row=count_row, column=1)
+
+
+def edit_tab_save(item_id, entry_array, window_focus):
+    global internal_database
+    if entery_test(entry_array, window_focus):
+        delete_entry(item_id, True)
+        entry_array = [item_id] + entry_array
+        internal_database.append(entry_array)
+        enter_to_drive(True, Edit_tab)
+        window_focus.destroy()
 
 
 def open_Output_window(button_name_array):
@@ -322,7 +442,7 @@ def Load_database(button_array):
 # Create the main window
 root = Tk()
 root.title("Main Window")
-root.geometry("660x460")
+root.geometry("260x130")
 # Creat widgets for main window
 label = Label(root, text="This is a main window")
 label_Database_location = Label(root, text="Database location")
