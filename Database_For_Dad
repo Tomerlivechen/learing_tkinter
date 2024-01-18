@@ -6,6 +6,7 @@ Created on Sat Dec  2 17:03:26 2023
 """
 from tkinter import *
 from tkinter import ttk
+from datetime import datetime
 import os
 import uuid
 import csv
@@ -17,9 +18,9 @@ global catagory_name_array
 global catagory_lable_array
 global report_type
 
-catagory_name_array = ["ID", "Cat1", "Cat2", "Cat3", "Amount", "Min"]
+catagory_name_array = ["ID", "Cat1", "Cat2", "Item", "Amount", "Min"]
 catagory_lable_array = ["This is the lable for catagory #1", "This is the lable for catagory #2",
-                        "This is the lable for catagory #3", "Current amount of items:", "Minimum amount of items:"]
+                        "Name of item", "Current amount of items:", "Minimum amount of items:"]
 
 internal_database = [catagory_name_array]
 
@@ -70,6 +71,12 @@ def load_csv_to_matrix(append):
         pass
 
 
+def patch_remove_header():
+    global internal_database
+    global catagory_name_array
+    internal_database = [
+        row for row in internal_database if row != catagory_name_array]
+
 # save the internal database to hard drive storage
 
 
@@ -79,9 +86,16 @@ def save_csv_to_drive(delete):
     if not delete:
         load_csv_to_matrix(True)
     internal_database = sort_and_remove_duplicates(internal_database)
+#    with open(database_path, 'w', newline='') as csv_file:
+#       csv_writer = csv.writer(csv_file)
+#        csv_writer.writerows(internal_database)
+    header = internal_database[0]
+    data = internal_database[1:]
+
     with open(database_path, 'w', newline='') as csv_file:
         csv_writer = csv.writer(csv_file)
-        csv_writer.writerows(internal_database)
+        csv_writer.writerow(header)
+        csv_writer.writerows(data)
 
 
 # check if path exists
@@ -158,6 +172,7 @@ def open_Input_window(button_name_array):
     global internal_database
     global catagory_name_array
     global catagory_lable_array
+    global report_text
     Input_window = Toplevel(root)
     Input_window.title("Input window")
     Input_window.geometry("860x460")
@@ -181,7 +196,6 @@ def open_Input_window(button_name_array):
                           command=lambda: enter_to_storage([entry_Cat1.get(), entry_Cat2.get(), entry_Cat3.get(), entry_Cat4.get(), entry_Cat5.get()], [entry_Cat1, entry_Cat2, entry_Cat3, entry_Cat4, entry_Cat5], Input_window))
     button_Save = Button(Input_window, text="Save",
                          command=lambda: enter_to_drive(False, Input_window))
-    global report_text
     report_text = Text(Input_window, borderwidth=5, bd=3,
                        bg="gray", width=80, height=15, font=('Courier', 12))
     report_text.insert(
@@ -259,6 +273,7 @@ def search_in_internal_database(combo_values, text_name):
 
 
 def write_on_text(filtered_array, text_name):
+    patch_remove_header()
     text_name.config(state=NORMAL)
     text_name.delete('1.0', END)
     text_name.insert(
@@ -269,13 +284,13 @@ def write_on_text(filtered_array, text_name):
                 text_name.insert(END, f'{filtered_array[i][j]}\t')
             else:
                 text_name.insert(END, f'{filtered_array[i][j]}\t\t\t\t\t')
-        text_name.insert(END, f'\n')
+#        text_name.insert(END, f'\n')
     text_name.config(state=DISABLED)
 
 
 def delete_entry(item_id, replace, window_focus):
     global internal_database
-    falg = 0
+    flag = 0
     for row in internal_database:
         if row[0] == item_id:
             internal_database.remove(row)
@@ -330,7 +345,7 @@ def open_Edit_window(button_name_array):
     label_edit = Label(Edit_window, text="Enter the ID if the item to edit")
     id_to_edit_entry = Entry(Edit_window, width=40)
     delete_button = Button(Edit_window, text="Delete",
-                           command=lambda: delete_entry(id_to_edit_entry.get(), False))
+                           command=lambda: delete_entry(id_to_edit_entry.get(), False, Edit_window))
     edit_button = Button(Edit_window, text="Edit",
                          command=lambda: open_edit_tab(id_to_edit_entry.get(), [delete_button, edit_button, save_button]))
     save_button = Button(Edit_window, text="Save",
@@ -468,7 +483,7 @@ def open_Output_window(button_name_array):
     combo_Cat4 = ttk.Combobox(Output_window, values=cat_Values[3])
 
     filter_button = Button(Output_window, text="Filter",
-                           command=lambda: search_in_internal_database([combo_Cat1.get(), combo_Cat2.get(), combo_Cat3.get(), combo_Cat4.get()], report_text, "Custom_report"))
+                           command=lambda: filter_button_action([combo_Cat1.get(), combo_Cat2.get(), combo_Cat3.get(), combo_Cat4.get()], report_text, "Custom_report"))
     full_report_button = Button(Output_window, text="Full report",
                                 command=lambda: full_report_button_action(internal_database, report_text, "Full_report"))
     under_min_button = Button(Output_window, text="Under Min report",
@@ -507,21 +522,23 @@ def open_Output_window(button_name_array):
     report_text.grid(row=count_row, column=0, columnspan=6)
     scrollbar.grid(row=count_row, column=6, sticky="ns")
     count_row += 1
-    label_edit.grid(row=count_row, column=0, columnspan=3)
-    count_row += 1
-    id_to_edit_entry.grid(row=count_row, column=0, columnspan=3)
-    count_row += 1
     Export_button.grid(row=count_row, column=0)
+
+
+TODO
 
 
 def export_report(report_text):
     global database_path
+    global internal_database
     global report_type
-    export_path = database_path[:4]
-    export_path += report_type+".txt"
-    text_content = text_widget.get("1.0", tk.END)
-    with open(file_path, 'w') as file:
-        file.write(text_content)
+    export_path = database_path[:-4]
+    current_datetime = datetime.now()
+    formatted_datetime = current_datetime.strftime("%Y-%m-%d %H_%M_%S")
+    export_path += report_type+"_"+formatted_datetime+".txt"
+    text_content = report_text.get("1.0", END)
+    with open(export_path, 'w') as file:
+        file.write(str(internal_database))
 
 
 def on_new_window_close(window_name, button_name_array):
