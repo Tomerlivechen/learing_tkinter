@@ -13,7 +13,7 @@ import csv
 import numpy as np
 global database_path
 global internal_database
-global loaded_database
+global pending_report
 global catagory_name_array
 global catagory_lable_array
 global report_type
@@ -273,6 +273,8 @@ def search_in_internal_database(combo_values, text_name):
 
 
 def write_on_text(filtered_array, text_name):
+    global pending_report
+    pending_report = filtered_array
     patch_remove_header()
     text_name.config(state=NORMAL)
     text_name.delete('1.0', END)
@@ -525,20 +527,49 @@ def open_Output_window(button_name_array):
     Export_button.grid(row=count_row, column=0)
 
 
-TODO
+def generate_report(matrix, headers):
+    if len(matrix) == 0 or len(matrix[0]) != len(headers):
+        print("Invalid matrix or headers.")
+        return
+
+    # Calculate the maximum length of each column
+    col_widths = [max(len(str(matrix[row][col])), len(str(headers[col])))
+                  for col in range(len(headers))
+                  for row in range(len(matrix))]
+
+    # Create the separator line
+    separator = "+".join("-" * (width + 2) for width in col_widths)
+    separator = f"+{separator}+"
+
+    # Create the header row
+    header_row = "|".join(f"{headers[col]:^{col_widths[col]}}"
+                          for col in range(len(headers)))
+    header_row = f"|{header_row}|"
+
+    # Create the data rows
+    data_rows = [f"|{'|'.join(f'{matrix[row][col]:^{col_widths[col]}}' for col in range(len(headers)))}|"
+                 for row in range(len(matrix))]
+
+    # Combine everything to form the report
+    report = [separator, header_row, separator] + data_rows + [separator]
+
+    # Print or return the report as a string
+    report_str = "\n".join(report)
+    return (report_str)
 
 
 def export_report(report_text):
     global database_path
-    global internal_database
+    global pending_report
     global report_type
+    global catagory_name_array
     export_path = database_path[:-4]
     current_datetime = datetime.now()
     formatted_datetime = current_datetime.strftime("%Y-%m-%d %H_%M_%S")
     export_path += report_type+"_"+formatted_datetime+".txt"
-    text_content = report_text.get("1.0", END)
+    text_content = generate_report(pending_report, catagory_name_array)
     with open(export_path, 'w') as file:
-        file.write(str(internal_database))
+        file.write(str(text_content))
 
 
 def on_new_window_close(window_name, button_name_array):
