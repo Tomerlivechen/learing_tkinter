@@ -239,7 +239,6 @@ def DataSetConstructior(file_path, sheet_name, x_axis, y_axis, title, export_fol
     [x_data, y_data, color] = read_excel_data(file_path, sheet_name)
     data_set = DataSet(x_data, y_data, color, export_folder, x_axis,
                        y_axis, title)
-    data_set.p_value = tukey_kermer(data_set)
     return data_set
 
 
@@ -295,6 +294,7 @@ def plotcommands(data_set, plot_type):
     if plot_type == "Strip":
         figure = stripplot(data_set)
     if plot_type == "Pval":
+        data_set.p_value = tukey_kermer(data_set)
         if data_set.p_value is None:
             message = "P-values not available. Please generate them first."
             show_error_message(message)
