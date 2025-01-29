@@ -1,0 +1,467 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Sun May 22 10:30:58 2022
+
+@author: tomer
+"""
+
+import math
+import random
+import threading
+from tkinter import *
+root = Tk()
+root.title("Codon Optimizer")
+root.geometry("660x780")
+# Variables
+Protein = ""
+counter = 0
+total_occurrences = 0
+optimizationOptions = ["Optimization for muscle expression", "Optimization high GC content",
+                       "Optimization for Low Uridin content", "Optimization by JHU"]
+optimizationTypeSelection = IntVar()
+countdown = 0
+
+# Objects
+# Classes
+
+
+class LabelAndEntry:
+    def __init__(self, label_text, position_x, position_y):
+        self.label = Label(root, text=label_text)
+        self.label.grid(row=position_x, column=position_y)
+        self.entry = Entry(root, font=("Arial", 14), width=50)
+        self.entry.grid(row=position_x, column=position_y+1)
+
+
+class LabelAndText:
+    def __init__(self, label_text, position_x, position_y, text_height, text_width):
+        self.label = Label(root, text=label_text, font='David 12 bold')
+        self.label.grid(row=position_x, column=position_y)
+        self.text = Text(root, borderwidth=5, width=text_width, height=text_height)
+        self.text.grid(row=position_x+1, column=position_y)
+
+
+class QueryRequest:
+    def __init__(self, protein_sequence, restriction_list, mir_list, optimization_type, stringency, tries, name):
+        self.protein_sequence = protein_sequence
+        self.restriction_list = restriction_list
+        self.mir_list = mir_list
+        self.optimization_type = optimization_type
+        self.stringency = stringency
+        self.tries = tries
+        self.name = name
+
+
+# functions
+
+
+def rando():
+    randr = random.randint(0, 100)
+    return randr
+
+
+def reader(request: QueryRequest):
+    cut_site_test = 1
+    ender = ""
+    global counter
+    global Protein
+    optimizationType = int(request.optimization_type)
+# request export files
+    exported = str(filename.get())+".txt"
+    f = open(exported, 'a')
+    uname = protName.get()
+# repeating run initial unwanted cut sites are removed
+
+    while cut_site_test >= 1:
+        cut_site_test = 0
+# clearing protean variable
+        Protein = ""
+        content = request.protein_sequence
+# match amino acid to codon according to optimization platform
+
+        if optimizationType == 0:
+            for i in range(0, len(content)):
+                Protein = Protein + ratio_muscle((content[i]))
+        elif optimizationType == 1:
+            for i in range(0, len(content)):
+                Protein = Protein + ratio_gc((content[i]))
+        elif optimizationType == 2:
+            for i in range(0, len(content)):
+                Protein = Protein + ratio_low_u((content[i]))
+        elif optimizationType == 3:
+            for i in range(0, len(content)):
+                Protein = Protein + jhu_opt((content[i]))
+
+# DNA sequence check
+        cut_site_test, ender = seq_test(content, request)
+# export product
+    print(str(ender)+"\n>" + uname, file=f)
+    print(Protein, file=f)
+
+# test sequence for unwanted cut sites and mir targets and replacing codons
+
+
+def seq_test(protein_aminoacid, request: QueryRequest):
+    global Protein
+    global counter
+    global countdown
+    global total_occurrences
+    mir = 0
+    DNAValidation = 5
+    counter = 0
+    limiter = request.stringency
+    tryLimit = request.tries
+# list of restriction sites
+    restr = request.restriction_list
+# incomplete list of mir binding domains
+    mirList = request.mir_list
+    while DNAValidation > limiter:
+        mir = 0
+        resE = 0
+# search and replace restriction sit domains
+        for ind in range(0, len(restr)):
+            rep = Protein.find(str(restr[ind]))
+            if rep >= 1:
+                resE = resE+rep
+                codon_replace(rep, protein_aminoacid, request.optimization_type)
+                counter = counter+1
+# search and replace mir binding domains
+        for index in range(0, len(mirList)):
+            tempMir = Protein.find(str(mirList[index]))
+            if tempMir >= 1:
+                codon_replace(tempMir, protein_aminoacid, request.optimization_type)
+                counter = counter+1
+# count mir and binding domains
+        [counts, total_occurrences] = count_mirs_in_sequence(
+            Protein, mirList+restr)
+        DNAValidation = total_occurrences
+        counter = counter+1
+# if system was unable to produce a protean sequence under limitations give best possibility
+        countdown = int((int(counter) / int(tryLimit)) * 100)
+        if int(counter) >= int(tryLimit):
+            [counts, total_occurrences] = count_mirs_in_sequence(
+                Protein, mirList+restr)
+            resp = ("Limits may be too stringent system has run " + str(counter) +
+                    " times without appropriate result, this is the best possible under limitations, there were " + str(total_occurrences) +
+                    " unwanted domains left in the following diversity" + str(counts))
+            return 0, resp
+# if system was able to produce a protean sequence under limitations give sequence
+    resp = str('System has run ' + str(counter)+' times')
+    return DNAValidation, resp
+
+# count all mirs after failing
+
+
+def count_mirs_in_sequence(prot_seq, mir_list):
+    global total_occurrences
+    counts = {element: 0 for element in mir_list}
+    prot_seq = prot_seq.upper()
+    total_occurrences = 0
+    for element in mir_list:
+        count = prot_seq.count(element.upper())
+        counts[element] = count
+        total_occurrences += count
+    counts = {element: count for element, count in counts.items() if count > 0}
+    return counts, total_occurrences
+
+# replaces codons of unwanted sites
+
+
+def codon_replace(index, protein_amino_acid, optimization_type):
+    global Protein
+    replaceString = ""
+    aaPlace = [0]*3
+    amino_acid = [""]*3
+    aa_codon = [""]*3
+# find problematic location and three amino acids after it
+    for aap in range(0, 3):
+        aaPlace[aap] = math.floor(index/3)+aap
+# find the identity of the three problematic amino acids
+    for aas in range(0, 3):
+        amino_acid[aas] = protein_amino_acid[aaPlace[aas]]
+
+# replace amino acid codons according to optimization platform
+    if optimization_type == 0:
+        for aac in range(0, 3):
+            aa_codon[aac] = ratio_muscle(amino_acid[aac])
+    elif optimization_type == 1:
+        for aac in range(0, 3):
+            aa_codon[aac] = ratio_gc(amino_acid[aac])
+    elif optimization_type == 2:
+        for aac in range(0, 3):
+            aa_codon[aac] = ratio_low_u(amino_acid[aac])
+    elif optimization_type == 3:
+        for aac in range(0, 3):
+            aa_codon[aac] = jhu_opt(amino_acid[aac])
+# merge changed amino acid codons to a 9 letter sequence
+    for total in range(0, 3):
+        replaceString = replaceString+aa_codon[total]
+# replace changed amino acid codons in protean DNA sequence
+    temp = list(Protein)
+    for i in range(0, len(replaceString)):
+        temp[((math.floor(index/3))*3)+i] = replaceString[i]
+    Protein = "".join(temp)
+
+# Codon optimization for high GC contest
+
+
+def ratio_gc(aa):
+    switch_dict = {
+        'A': {30: 'GCC', 50: 'GCT', 70: 'GCA', 100: 'GCG'},
+        'C': {34: 'TGT', 100: 'TGC'},
+        'D': {67: 'GAC', 100: 'GAT'},
+        'E': {67: 'GAG', 100: 'GAA'},
+        'F': {1: 'TTT', 100: 'TTC'},
+        'G': {30: 'GGC', 50: 'GGA', 80: 'GGG', 100: 'GGT'},
+        'H': {67: 'CAC', 100: 'CAT'},
+        'I': {98: 'ATC', 99: 'ATT', 100: 'ATA'},
+        'K': {99: 'AAG', 100: 'AAA'},
+        'L': {28: 'CTG', 57: 'CTC', 71: 'TTG', 85: 'CTT', 86: 'TTA', 100: 'CTA'},
+        'M': {100: 'ATG'},
+        'N': {99: 'AAC', 100: 'AAT'},
+        'P': {20: 'CCT', 50: 'CCC', 70: 'CCA', 100: 'CCG'},
+        'Q': {67: 'CAG', 100: 'CAA'},
+        'R': {7: 'AGA', 23: 'AGG', 46: 'CGC', 69: 'CGG', 84: 'CGA', 100: 'CGT'},
+        'S': {22: 'AGC', 33: 'TCT', 55: 'TCC', 66: 'TCA', 78: 'AGT', 100: 'TCG'},
+        'T': {33: 'ACC', 50: 'ACT', 77: 'ACA', 100: 'ACG'},
+        'V': {33: 'GTG', 50: 'GTT', 83: 'GTC', 100: 'GTA'},
+        'W': {100: 'TGG'},
+        'Y': {99: 'TAC', 100: 'TAT'},
+        '/n': {100: ''},
+        ' ': {100: ''},
+    }
+
+    vv = rando()
+
+    if aa in switch_dict:
+        for upper_limit, value in switch_dict[aa].items():
+            if vv <= upper_limit:
+                return value
+    else:
+        return "***"
+
+# Codon optimization according to JHU
+
+
+def jhu_opt(aa):
+    switch_dict = {
+        'A': {1: 'GCG', 3: 'GCA', 38: 'GCC', 100: 'GCT'},
+        'C': {40: 'TGC', 100: 'TGT'},
+        'D': {3: 'GAT', 100: 'GAC'},
+        'E': {2: 'GAG', 100: 'GAA'},
+        'F': {1: 'TTT', 100: 'TTC'},
+        'G': {1: 'GGA', 3: 'GGG', 5: 'GGC', 100: 'GGT'},
+        'H': {2: 'CAT', 100: 'CAC'},
+        'I': {1: 'ATA', 27: 'ATT', 100: 'ATC'},
+        'K': {1: 'AAA', 100: 'AAG'},
+        'L': {1: 'CTG', 3: 'CTC', 4: 'CTA', 7: 'CTT', 9: 'TTA', 100: 'TTG'},
+        'M': {100: 'ATG'},
+        'N': {1: 'AAT', 100: 'AAC'},
+        'P': {1: 'CCG', 3: 'CCC', 4: 'CCT', 100: 'CCA'},
+        'Q': {1: 'CAG', 100: 'CAA'},
+        'R': {1: 'CGA', 3: 'AGG', 5: 'CGG', 7: 'CGC', 39: 'AGA', 100: 'CGT'},
+        'S': {1: 'AGT', 3: 'AGC', 5: 'TCG', 7: 'TCA', 43: 'TCC', 100: 'TCT'},
+        'T': {1: 'ACG', 3: 'ACA', 45: 'ACC', 100: 'ACT'},
+        'V': {1: 'GTA', 3: 'GTG', 48: 'GTT', 100: 'GTC'},
+        'W': {100: 'TGG'},
+        'Y': {1: 'TAT', 100: 'TAC'},
+        '/n': {100: ''},
+        ' ': {100: ''},
+    }
+    vv = rando()
+
+    if aa in switch_dict:
+        for upper_limit, value in switch_dict[aa].items():
+            if vv <= upper_limit:
+                return value
+    else:
+        return "***"
+
+
+# Codon optimization according to muscular codon ratio
+
+
+def ratio_muscle(aa):
+    switch_dict = {
+        'A': {35: 'GCC', 65: 'GCT', 89: 'GCA', 100: 'GCG'},
+        'C': {52: 'TGT', 100: 'TGC'},
+        'D': {52: 'GAC', 100: 'GAT'},
+        'E': {62: 'GAG', 100: 'GAA'},
+        'F': {51: 'TTT', 100: 'TTC'},
+        'G': {32: 'GGC', 59: 'GGA', 81: 'GGG', 100: 'GGT'},
+        'H': {54: 'CAC', 100: 'CAT'},
+        'I': {47: 'ATC', 84: 'ATT', 100: 'ATA'},
+        'K': {56: 'AAG', 100: 'AAA'},
+        'L': {38: 'CTG', 54: 'CTC', 69: 'TTG', 83: 'CTT', 92: 'TTA', 100: 'CTA'},
+        'M': {100: 'ATG'},
+        'N': {55: 'AAC', 100: 'AAT'},
+        'P': {30: 'CCT', 59: 'CCC', 88: 'CCA', 100: 'CCG'},
+        'Q': {75: 'CAG', 100: 'CAA'},
+        'R': {23: 'AGA', 42: 'AGG', 61: 'CGC', 78: 'CGG', 90: 'CGA', 100: 'CGT'},
+        'S': {21: 'AGC', 41: 'TCT', 61: 'TCC', 77: 'TCA', 93: 'AGT', 100: 'TCG'},
+        'T': {33: 'ACC', 61: 'ACT', 89: 'ACA', 100: 'ACG'},
+        'V': {46: 'GTG', 66: 'GTT', 86: 'GTC', 100: 'GTA'},
+        'W': {100: 'TGG'},
+        'Y': {52: 'TAC', 100: 'TAT'},
+        '/n': {100: ''},
+        ' ': {100: ''},
+    }
+
+    vv = rando()
+
+    if aa in switch_dict:
+        for upper_limit, value in switch_dict[aa].items():
+            if vv <= upper_limit:
+                return value
+    else:
+        return "***"
+# Codon optimization according to  minimal uridine/thymidine content
+
+
+def ratio_low_u(aa):
+    switch_dict = {
+        'A': {65: 'GCC', 89: 'GCA', 100: 'GCG'},
+        'C': {100: 'TGC'},
+        'D': {100: 'GAC'},
+        'E': {62: 'GAG', 100: 'GAA'},
+        'F': {100: 'TTC'},
+        'G': {32: 'GGC', 59: 'GGA', 100: 'GGG'},
+        'H': {100: 'CAC'},
+        'I': {84: 'ATC', 100: 'ATA'},
+        'K': {56: 'AAG', 100: 'AAA'},
+        'L': {54: 'CTG', 83: 'CTC', 100: 'CTA'},
+        'M': {100: 'ATG'},
+        'N': {100: 'AAC'},
+        'P': {59: 'CCC', 88: 'CCA', 100: 'CCG'},
+        'Q': {75: 'CAG', 100: 'CAA'},
+        'R': {23: 'AGA', 42: 'AGG', 61: 'CGC', 78: 'CGG', 100: 'CGA'},
+        'S': {93: 'AGC', 100: 'TCG'},
+        'T': {2: 'ACT', 61: 'ACC', 89: 'ACA', 100: 'ACG'},
+        'V': {46: 'GTG', 66: 'GTA', 86: 'GTC', 100: 'GTA'},
+        'W': {100: 'TGG'},
+        'Y': {100: 'TAC'},
+        '/n': {100: ''},
+        ' ': {100: ''},
+    }
+
+    vv = rando()
+
+    if aa in switch_dict:
+        for upper_limit, value in switch_dict[aa].items():
+            if vv <= upper_limit:
+                return value
+    else:
+        return "***"
+
+# counter updating process
+
+
+def update_counter():
+    global total_occurrences
+    global counter
+    tryLimit = int(tryScale.get())
+    label7.config(
+        text=f"{int(counter / tryLimit * 100)}% tries \n {int(total_occurrences)} mirs still present")
+    root.after(100, update_counter)
+# start pathway
+
+
+def start():
+    queryRequest = get_request()
+    global counter
+    counter = 0
+
+
+# request type of optimization
+    _counterThread = threading.Thread(target=update_counter).start()
+    _mainThread = threading.Thread(target=reader(queryRequest)).start()
+
+
+def get_request():
+    newStringency = int(limScale.get())
+    newOptimizationType = int(optimizationTypeSelection.get())
+    newTryLimit = int(tryScale.get())
+    content = protEnter.get(1.0, END)
+    content.strip()
+    content.upper()
+    mirList = []
+    MirSequences = insertMirSequences.text.get(1.0, "end-1c").strip()
+    MirSequencesArray = MirSequences.split()
+    if len(MirSequencesArray) > 0:
+        mirList = MirSequencesArray
+    restr = []
+    restrictionSequences = insertRestrictionSites.text.get(1.0, "end-1c").strip()
+    restrictionSequencesArray = restrictionSequences.split()
+    if len(restrictionSequencesArray) > 0:
+        restr = restrictionSequencesArray
+    proteinName = protName.get()
+    queryRequest = QueryRequest(protein_sequence=content, restriction_list=restr, mir_list=mirList, optimization_type=newOptimizationType, stringency=newStringency, tries=newTryLimit, name=proteinName)
+    return queryRequest
+
+
+#    reader()
+
+# Widgets
+
+
+topLabel = Label(root, text="Codon Optimizer", font='David 18 bold')
+label1 = Label(root, text="Enter export file name and path:", font='David 12 bold')
+label3 = Label(root, text="select stringency of mir count",
+               font='David 12 bold')
+label4 = Label(root, text="select amount of tries", font='David 12 bold')
+label5 = Label(root, text="select type of optimization", font='David 12 bold')
+label6 = Label(root, text="Enter Protein name:", font='David 12 bold')
+label7 = Label(root, text="", font='David 18 bold')
+label8 = Label(root, text="Enter Protein Sequence", font='David 18 bold')
+
+limScale = Scale(root, from_=0, to=10, orient=HORIZONTAL, length=300)
+tryScale = Scale(root, from_=100, to=100000, orient=HORIZONTAL, length=300)
+
+gener = Button(root, text="Generate", command=lambda: start())
+
+
+filename = Entry(root, width=50)
+protName = Entry(root, width=50)
+protEnter = Text(root, borderwidth=5, width=80, height=10)
+
+# Placement
+
+topLabel.grid(row=counter, column=0, columnspan=2)
+counter += 1
+label1.grid(row=counter, column=0)
+filename.grid(row=counter, column=1)
+counter += 1
+label6.grid(row=counter, column=0)
+protName.grid(row=counter, column=1)
+counter += 1
+label3.grid(row=counter, column=0)
+limScale.grid(row=counter, column=1, sticky="w")
+counter += 1
+label4.grid(row=counter, column=0)
+tryScale.grid(row=counter, column=1, sticky="w")
+counter += 1
+label5.grid(row=counter, column=0)
+counter += 1
+optimizationOptionsValue = 0
+for i in optimizationOptions:
+    Radiobutton(root, text=i, variable=optimizationTypeSelection, value=optimizationOptionsValue).grid(
+        row=counter, column=0, sticky="w")
+    optimizationOptionsValue += 1
+    counter = counter+1
+counter += 1
+insertRestrictionSites = LabelAndText("Insert Restriction Sites to remove", counter, 0, 5, 80)
+insertRestrictionSites.text.grid(columnspan=2)
+counter += 2
+insertMirSequences = LabelAndText("Insert Mir Sequences to avoid", counter, 0, 5, 80)
+insertMirSequences.text.grid(columnspan=2)
+counter += 2
+label7.grid(row=counter, column=0)
+counter += 1
+label8.grid(row=counter, column=0)
+counter += 1
+protEnter.grid(row=counter, column=0, columnspan=3)
+counter += 1
+gener.grid(row=counter, column=0, sticky="e")
+
+# Run system
+root.mainloop()
